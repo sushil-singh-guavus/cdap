@@ -13,60 +13,73 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-import FormHelperText from '@material-ui/core/FormHelperText';
-import InputLabel from '@material-ui/core/InputLabel';
-import * as React from 'react';
-import withStyles, { StyleRules } from '@material-ui/core/styles/withStyles';
-import Select from '@material-ui/core/Select';
-import MenuItem from '@material-ui/core/MenuItem';
+import FormHelperText from "@material-ui/core/FormHelperText";
+import InputLabel from "@material-ui/core/InputLabel";
+import * as React from "react";
+import withStyles, { StyleRules } from "@material-ui/core/styles/withStyles";
+import Select from "@material-ui/core/Select";
+import MenuItem from "@material-ui/core/MenuItem";
 import AbstractRow, {
-  IAbstractRowProps,
-} from 'components/AbstractWidget/AbstractMultiRowWidget/AbstractRow';
-import MultiSelect, { IOption } from '../FormInputs/MultiSelect';
-import { IWidgetProperty, IPluginProperty } from 'components/ConfigurationGroup/types';
-import PropertyRow from 'components/ConfigurationGroup/PropertyRow';
-import InputFieldDropdown from '../InputFieldDropdown';
-import { IconButton } from '@material-ui/core';
-import If from 'components/If';
-import ExpandLessIcon from '@material-ui/icons/ExpandLess';
-import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
-import FormControl from '@material-ui/core/FormControl';
+  IAbstractRowProps
+} from "components/AbstractWidget/AbstractMultiRowWidget/AbstractRow";
+import MultiSelect, { IOption } from "../FormInputs/MultiSelect";
+import {
+  IWidgetProperty,
+  IPluginProperty,
+  IPropertyFilter,
+  PluginProperties
+} from "components/ConfigurationGroup/types";
+import PropertyRow from "components/ConfigurationGroup/PropertyRow";
+import InputFieldDropdown from "../InputFieldDropdown";
+import { IconButton } from "@material-ui/core";
+import If from "components/If";
+import ExpandLessIcon from "@material-ui/icons/ExpandLess";
+import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
+import FormControl from "@material-ui/core/FormControl";
+import ConfigurationGroup, {
+  IConfigurationGroupProps
+} from "components/ConfigurationGroup";
 
 const styles = (theme): StyleRules => {
   return {
     // ...AbstractRowStyles(theme),
     root: {
-      minHeight: '50px',
-      display: 'grid',
-      gridTemplateColumns: '1fr auto auto auto',
-      alignItems: 'end',
-      '& > button': {
-        width: '40px',
-        height: '40px',
-        margin: 'auto',
-      },
+      minHeight: "50px",
+      display: "grid",
+      gridTemplateColumns: "1fr auto auto auto",
+      alignItems: "center",
+      "& > button": {
+        width: "40px",
+        height: "40px",
+        margin: "auto",
+        marginTop: "5px"
+      }
     },
     inputContainer: {
-      display: 'grid',
-      gridTemplateColumns: '40px 1fr 30px 1fr 50px 1fr',
-      gridGap: '10px',
+      display: "grid",
+      gridTemplateColumns: "40px 1fr 30px 1fr 50px 1fr",
+      gridGap: "10px"
     },
     disabled: {
-      color: `${theme.palette.grey['50']}`,
+      color: `${theme.palette.grey["50"]}`
     },
     separator: {
-      textAlign: 'center',
+      textAlign: "center"
     },
-    transformContainer: {
-      marginLeft: '20px',
-      marginTop: '15px',
-      marginBottom: '15px',
+    group: {
+      marginLeft: "20px",
+      marginTop: "15px",
+      marginBottom: "15px",
+      "& > div > div": {
+        padding: "15px 0px 10px"
+      }
     },
-    transformProperty: {
-      '& > *': {
-        padding: '15px 0px 10px',
-      },
-    },
+    groupTitle: {
+      marginBottom: "15px",
+      "& > h2": {
+        fontSize: "1.2rem"
+      }
+    }
   };
 };
 
@@ -75,6 +88,7 @@ export interface ITransformProp {
   name: string;
   options: IWidgetProperty[];
   supportedTypes?: string[];
+  filters?: IPropertyFilter[];
 }
 export type FilterOption = IOption | string;
 
@@ -85,10 +99,10 @@ interface IDLPRowProps extends IAbstractRowProps<typeof styles> {
 }
 
 interface IDLPRowState {
-  field: string;
+  fields: string;
   transform: string;
-  filter: string;
-  transformProperties: object;
+  filters: string;
+  transformProperties: Record<string, string>;
   expanded?: boolean;
 }
 
@@ -98,16 +112,16 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
   public static defaultProps = {
     transforms: [],
     filters: [],
-    extraConfig: '',
-    expanded: false,
+    extraConfig: "",
+    expanded: false
   };
 
   public state = {
-    field: '',
-    transform: '',
-    filter: '',
+    fields: "",
+    transform: "",
+    filters: "",
     transformProperties: {},
-    expanded: false,
+    expanded: false
   };
 
   /**
@@ -121,26 +135,26 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
       this.setState({ ...this.state, ...j });
       console.log(j);
     } catch (error) {
-      console.log('FF');
+      console.log("FF");
       console.log(error);
       this.setState({
-        field: '',
-        transform: '',
-        filter: '',
-        transformProperties: {},
+        fields: "",
+        transform: "",
+        filters: "",
+        transformProperties: {}
       });
     }
   }
 
   private handleChangeMultiSelect = (type: StateKeys, e: string) => {
-    if (type === 'filter') {
-      const noneWasSelected: boolean = this.state.filter.includes('NONE');
-      const noneIsSelected: boolean = e.includes('NONE');
+    if (type === "filters") {
+      const noneWasSelected: boolean = this.state.filters.includes("NONE");
+      const noneIsSelected: boolean = e.includes("NONE");
 
       if (noneWasSelected && noneIsSelected) {
-        e = e.replace('NONE,', '');
+        e = e.replace("NONE,", "");
       } else if (!noneWasSelected && noneIsSelected) {
-        e = 'NONE';
+        e = "NONE";
       }
     }
 
@@ -149,27 +163,38 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
 
   private handleChangeSelect = (type: StateKeys, e) => {
     this.handleChange(type, e.target.value);
-    this.handleChange('expanded', true);
+    if (type === "transform") {
+      debugger;
+      const transformProps = {};
+      this.props.transforms
+        .filter(transform => transform.name === e.target.value)[0]
+        .options.forEach(element => {
+          transformProps[element.name] = "";
+        });
+      this.handleChange("transformProperties", transformProps);
+      this.handleChange("expanded", Object.keys(transformProps).length > 0);
+    }
   };
 
-  private handleChangeTransformOptions(optionName, e) {
-    const newOptions = {
-      ...this.state.transformProperties,
-      [optionName]: e[optionName],
-    };
-    this.handleChange('transformProperties', newOptions);
+  private handleChangeTransformOptions(values: Record<string, string>) {
+    const diffs = Object.keys(values).filter(
+      key => values[key] !== this.state.transformProperties[key]
+    );
+    if (diffs.length > 0) {
+      this.handleChange("transformProperties", values);
+    }
   }
 
   private handleChange = (type: StateKeys, value) => {
     this.setState(
       {
-        [type]: value,
+        [type]: value
       } as Pick<IDLPRowState, StateKeys>,
       () => {
-        const { transform, filter } = this.state;
+        const { transform, filters } = this.state;
 
-        if (transform.length === 0 || filter.length === 0) {
-          this.onChange('');
+        if (transform.length === 0) {
+          this.onChange("");
           return;
         }
 
@@ -183,25 +208,70 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
   public renderInput = () => {
     console.log(this.state);
     const filters = this.props.filters.map((option: FilterOption) => {
-      if (typeof option === 'object') {
+      if (typeof option === "object") {
         return option;
       }
 
       return {
         id: option,
-        label: option,
+        label: option
       };
     });
 
     const transforms = this.props.transforms;
     const inputFieldProps = {
       multiselect: true,
-      allowedTypes: [],
+      allowedTypes: []
     };
-    if (this.state.transform !== '') {
+
+    const properties: PluginProperties = {};
+    const config: IConfigurationGroupProps = {
+      classes: {},
+      errors: {},
+      values: {},
+      pluginProperties: properties
+    };
+    if (this.state.transform !== "") {
       inputFieldProps.allowedTypes =
-        transforms.filter((transform) => transform.name == this.state.transform)[0]
-          .supportedTypes || [];
+        transforms.filter(
+          transform => transform.name == this.state.transform
+        )[0].supportedTypes || [];
+
+      const transform: ITransformProp = this.props.transforms.filter(
+        t => t.name === this.state.transform
+      )[0];
+      transform.options.forEach(transProp => {
+        const pluginProp: IPluginProperty = {
+          name: transProp.name
+        };
+        if (transProp["widget-attributes"]) {
+          if (transProp["widget-attributes"].macro) {
+            pluginProp.macroSupported = transProp["widget-attributes"].macro;
+          }
+          if (transProp["widget-attributes"].description) {
+            pluginProp.description = transProp["widget-attributes"].description;
+          }
+          if (transProp["widget-attributes"].required) {
+            pluginProp.required = transProp["widget-attributes"].required;
+          }
+        }
+        properties[transProp.name] = pluginProp;
+      });
+
+      config.pluginProperties = properties;
+      config.errors = {};
+      config.widgetJson = {
+        "configuration-groups": [
+          {
+            label: transform.label + " properties",
+            properties: transform.options
+          }
+        ],
+        filters: transform.filters
+      };
+      config.values = this.state.transformProperties;
+      config.classes = this.props.classes;
+      config.onChange = this.handleChangeTransformOptions.bind(this);
     }
 
     return (
@@ -213,12 +283,11 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
               <Select
                 classes={{ disabled: this.props.classes.disabled }}
                 value={this.state.transform}
-                onChange={this.handleChangeSelect.bind(this, 'transform')}
+                onChange={this.handleChangeSelect.bind(this, "transform")}
                 displayEmpty={true}
                 disabled={false}
-                placeholder="TEST"
               >
-                {transforms.map((option) => {
+                {transforms.map(option => {
                   return (
                     <MenuItem value={option.name} key={option.name}>
                       {option.label}
@@ -230,63 +299,29 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
             <span className={this.props.classes.separator}>on</span>
             <MultiSelect
               disabled={false}
-              value={this.state.filter}
+              value={this.state.filters}
               widgetProps={{ options: filters }}
-              onChange={this.handleChangeMultiSelect.bind(this, 'filter')}
+              onChange={this.handleChangeMultiSelect.bind(this, "filters")}
             />
             <span className={this.props.classes.separator}>within</span>
             <InputFieldDropdown
               widgetProps={inputFieldProps}
-              value={this.state.field}
-              onChange={this.handleChangeMultiSelect.bind(this, 'field')}
+              value={this.state.fields}
+              onChange={this.handleChangeMultiSelect.bind(this, "fields")}
               disabled={false}
               extraConfig={this.props.extraConfig}
             />
           </div>
-
           <div className={this.props.classes.transformContainer}>
-            {transforms.map((transform) => {
-              if (transform.name !== this.state.transform || !this.state.expanded) {
-                return;
+            <If
+              condition={
+                this.state.transform !== "" &&
+                Object.keys(this.state.transformProperties).length > 0 &&
+                this.state.expanded
               }
-              return (
-                <React.Fragment>
-                  <h6>{transform.label} properties</h6>
-                  {transform.options.map((property, j) => {
-                    const pluginProp: IPluginProperty = {
-                      description: '',
-                      macroSupported: false,
-                      required: false,
-                    };
-                    if (property['widget-attributes']) {
-                      if (property['widget-attributes'].macro) {
-                        pluginProp.macroSupported = property['widget-attributes'].macro;
-                      }
-                      if (property['widget-attributes'].description) {
-                        pluginProp.description = property['widget-attributes'].description;
-                      }
-                      if (property['widget-attributes'].required) {
-                        pluginProp.required = property['widget-attributes'].required;
-                      }
-                    }
-
-                    return (
-                      <div className={this.props.classes.transformProperty}>
-                        <PropertyRow
-                          key={`${property.name}-${j}`}
-                          widgetProperty={property}
-                          pluginProperty={pluginProp}
-                          value={this.state.transformProperties[property.name]}
-                          onChange={this.handleChangeTransformOptions.bind(this, property.name)}
-                          extraConfig={this.props.extraConfig}
-                          disabled={false}
-                        />
-                      </div>
-                    );
-                  })}
-                </React.Fragment>
-              );
-            })}
+            >
+              <ConfigurationGroup {...config} />
+            </If>
           </div>
         </div>
 
@@ -294,7 +329,7 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
           <IconButton
             color="primary"
             onClick={() => {
-              this.handleChange('expanded', !this.state.expanded);
+              this.handleChange("expanded", !this.state.expanded);
             }}
           >
             <ExpandLessIcon />
@@ -305,8 +340,9 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
           <IconButton
             color="primary"
             onClick={() => {
-              this.handleChange('expanded', !this.state.expanded);
+              this.handleChange("expanded", !this.state.expanded);
             }}
+            disabled={Object.keys(this.state.transformProperties).length == 0}
           >
             <ExpandMoreIcon />
           </IconButton>
