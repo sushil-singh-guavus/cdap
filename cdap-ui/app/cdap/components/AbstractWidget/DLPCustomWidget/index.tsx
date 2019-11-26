@@ -57,7 +57,6 @@ class DLPWidgetView extends AbstractMultiRowWidget<IDLPProps> {
   };
 
   public renderRow = (id, index) => {
-    console.log(this);
     const transforms = objectQuery(this.props, 'widgetProps', 'transforms');
     const filters = objectQuery(this.props, 'widgetProps', 'filters');
     return (
