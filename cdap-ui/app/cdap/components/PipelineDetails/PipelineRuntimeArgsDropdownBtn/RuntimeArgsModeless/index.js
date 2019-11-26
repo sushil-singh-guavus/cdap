@@ -38,27 +38,14 @@ class RuntimeArgsModeless extends PureComponent {
   state = {
     saving: false,
     savedSuccessMessage: null,
-    savingAndRunBtnDisabled: this.isRuntimeArgsFilled(this.props.runtimeArgs),
     savingAndRun: false,
     error: null,
   };
 
   componentWillReceiveProps(nextProps) {
-    let { runtimeArgs } = nextProps;
     this.setState({
-      savingAndRunBtnDisabled: this.isRuntimeArgsFilled(runtimeArgs),
       savedSuccessMessage: null,
     });
-  }
-
-  isRuntimeArgsFilled(runtimeArgs) {
-    return (
-      runtimeArgs.pairs.filter(
-        (runtimearg) =>
-          (!runtimearg.provided && (!isEmpty(runtimearg.key) && isEmpty(runtimearg.value))) ||
-          (isEmpty(runtimearg.key) && !isEmpty(runtimearg.value))
-      ).length > 0
-    );
   }
 
   toggleSaving = () => {
@@ -94,7 +81,8 @@ class RuntimeArgsModeless extends PureComponent {
   saveRuntimeArgsAndRun = () => {
     this.toggleSavingAndRun();
     let { runtimeArgs } = this.props;
-    runtimeArgs.pairs = runtimeArgs.pairs.filter((runtimeArg) => !runtimeArg.provided);
+    // Arguments with empty values are assumed to be provided from the pipeline
+    runtimeArgs.pairs = runtimeArgs.pairs.filter((runtimeArg) => !runtimeArg.value);
     let runtimeArgsMap = convertKeyValuePairsToMap(runtimeArgs.pairs);
     runPipeline(runtimeArgsMap);
     this.props.onClose();
@@ -118,13 +106,16 @@ class RuntimeArgsModeless extends PureComponent {
           loading={this.state.savingAndRun}
           className="btn btn-secondary"
           onClick={this.saveRuntimeArgsAndRun}
-          disabled={this.state.savingAndRunBtnDisabled || this.state.saving}
+          disabled={this.state.saving}
           label="Run"
         />
       );
     };
     return (
       <div className="runtime-args-modeless">
+        <div className="arguments-label">
+          Specify runtime arguments, empty values need to come from the pipeline.
+        </div>
         <RuntimeArgsTabContent />
         <div className="tab-footer">
           <div className="btns-container">

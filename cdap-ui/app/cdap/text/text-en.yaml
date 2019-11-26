@@ -75,7 +75,6 @@ commons:
   keyValPairs:
     keyLabel: Key
     keyPlaceholder: key
-    reset: Reset
     valueLabel: Value
     valuePlaceholder: value
   market: Hub
