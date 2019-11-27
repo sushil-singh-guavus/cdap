@@ -30,7 +30,6 @@ import {
   IPropertyFilter,
   PluginProperties,
 } from 'components/ConfigurationGroup/types';
-import PropertyRow from 'components/ConfigurationGroup/PropertyRow';
 import InputFieldDropdown from '../InputFieldDropdown';
 import { IconButton } from '@material-ui/core';
 import If from 'components/If';
@@ -38,7 +37,6 @@ import ExpandLessIcon from '@material-ui/icons/ExpandLess';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import FormControl from '@material-ui/core/FormControl';
 import ConfigurationGroup, { IConfigurationGroupProps } from 'components/ConfigurationGroup';
-import { isUnaryExpression } from '@babel/types';
 import { IErrorObj } from 'components/ConfigurationGroup/utilities';
 
 const styles = (theme): StyleRules => {
@@ -78,7 +76,7 @@ const styles = (theme): StyleRules => {
       marginTop: '15px',
       marginBottom: '15px',
       '& > div > div': {
-        padding: '15px 0px 10px',
+        padding: '15px 10px 10px',
       },
     },
     groupTitle: {
@@ -161,6 +159,19 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
     }
   }
 
+  // private getDefaultValueForTransformProperty(transformName, property) {
+  //   const trans = this.props.transforms.filter((transform) => transform.name === transformName);
+  //   if (trans.length != 1) {
+  //     return '';
+  //   }
+
+  //   const props = trans[0].options.filter((widgetProp) => widgetProp.name == property);
+  //   if (props.length != 1) {
+  //     return '';
+  //   }
+  //   return props[0]['widget-attributes'].default || '';
+  // }
+
   private handleChangeMultiSelect = (type: StateKeys, e: string) => {
     if (type === 'filters') {
       const noneWasSelected: boolean = this.state.filters.includes('NONE');
@@ -192,9 +203,18 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
   };
 
   private handleChangeTransformOptions(values: Record<string, string>) {
-    const diffs = Object.keys(values).filter(
-      (key) => values[key] !== this.state.transformProperties[key]
+    // Comparing new values to current state
+    const newValuesKeys = Object.keys(values);
+    const oldValuesKeys = Object.keys(this.state.transformProperties);
+    const longerKeysList =
+      newValuesKeys.length >= oldValuesKeys.length ? newValuesKeys : oldValuesKeys;
+    const shorterKeysList =
+      newValuesKeys.length < oldValuesKeys.length ? newValuesKeys : oldValuesKeys;
+    const diffs = longerKeysList.filter(
+      (key) => !shorterKeysList.includes(key) || values[key] !== this.state.transformProperties[key]
     );
+
+    // Only update if there are differences
     if (diffs.length > 0) {
       this.handleChange('transformProperties', values);
     }
