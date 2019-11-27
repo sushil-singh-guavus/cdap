@@ -62,8 +62,6 @@ const styles = (theme): StyleRules => {
     errorBorder: {
       border: '2px solid',
       borderColor: theme.palette.red[50],
-      marginLeft: '15px',
-      marginTop: '5px',
     },
     disabled: {
       color: `${theme.palette.grey['50']}`,
@@ -84,6 +82,11 @@ const styles = (theme): StyleRules => {
       '& > h2': {
         fontSize: '1.2rem',
       },
+    },
+    errorText: {
+      color: theme.palette.red[50],
+      marginLeft: '15px',
+      marginTop: '5px',
     },
   };
 };
@@ -143,12 +146,9 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
   public componentDidMount() {
     try {
       const jsonString = this.props.value;
-      console.log(jsonString);
-      const j = JSON.parse(jsonString);
-      this.setState({ ...this.state, ...j });
-      console.log(j);
+      const jsonObj = JSON.parse(jsonString);
+      this.setState({ ...this.state, ...jsonObj });
     } catch (error) {
-      console.log('FF');
       console.log(error);
       this.setState({
         fields: '',
@@ -159,24 +159,14 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
     }
   }
 
-  // private getDefaultValueForTransformProperty(transformName, property) {
-  //   const trans = this.props.transforms.filter((transform) => transform.name === transformName);
-  //   if (trans.length != 1) {
-  //     return '';
-  //   }
-
-  //   const props = trans[0].options.filter((widgetProp) => widgetProp.name == property);
-  //   if (props.length != 1) {
-  //     return '';
-  //   }
-  //   return props[0]['widget-attributes'].default || '';
-  // }
-
+  // Handles onChange for MultiSelect components (filters and fields selectors)
   private handleChangeMultiSelect = (type: StateKeys, e: string) => {
     if (type === 'filters') {
       const noneWasSelected: boolean = this.state.filters.includes('NONE');
       const noneIsSelected: boolean = e.includes('NONE');
 
+      // Ensuring user can't select 'NONE' along with other filters
+      // TODO: Use another component for the filters selector (https://issues.cask.co/browse/CDAP-16124)
       if (noneWasSelected && noneIsSelected) {
         e = e.replace('NONE,', '');
       } else if (!noneWasSelected && noneIsSelected) {
@@ -187,6 +177,7 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
     this.handleChange(type, e);
   };
 
+  // Handles onChange for Select components (transform selector)
   private handleChangeSelect = (type: StateKeys, e) => {
     const value = e.target.value;
     if (value == this.state.transform) {
