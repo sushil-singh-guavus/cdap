@@ -13,8 +13,6 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-import FormHelperText from '@material-ui/core/FormHelperText';
-import InputLabel from '@material-ui/core/InputLabel';
 import * as React from 'react';
 import withStyles, { StyleRules } from '@material-ui/core/styles/withStyles';
 import Select from '@material-ui/core/Select';
@@ -140,16 +138,12 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
     expanded: false,
   };
 
-  /**
-   * Sample input: fieldName:filterScrope(filter)
-   */
   public componentDidMount() {
     try {
       const jsonString = this.props.value;
       const jsonObj = JSON.parse(jsonString);
       this.setState({ ...this.state, ...jsonObj });
     } catch (error) {
-      console.log(error);
       this.setState({
         fields: '',
         transform: '',
@@ -180,7 +174,7 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
   // Handles onChange for Select components (transform selector)
   private handleChangeSelect = (type: StateKeys, e) => {
     const value = e.target.value;
-    if (value == this.state.transform) {
+    if (value === this.state.transform) {
       return;
     }
     this.handleChange(type, value);
@@ -206,10 +200,12 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
       newValuesKeys.length >= oldValuesKeys.length ? values : this.state.transformProperties;
     const shorterKeysList =
       newValuesKeys.length < oldValuesKeys.length ? newValuesKeys : oldValuesKeys;
+
+    // Generating list of property keys that have changed
     const diffs = longerKeysList.filter(
       (key) =>
-        !(shorterKeysList.includes(key) || longerDict[key] === '') ||
-        (values[key] !== undefined && values[key] !== this.state.transformProperties[key])
+        !(shorterKeysList.includes(key) || longerDict[key] === '') || // Checks if a non-empty value was removed
+        (values[key] !== undefined && values[key] !== this.state.transformProperties[key]) // Checks if the value was changed
     );
 
     // Only update if there are differences
@@ -224,7 +220,7 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
         [type]: value,
       } as Pick<IDLPRowState, StateKeys>,
       () => {
-        const { transform, filters } = this.state;
+        const { transform } = this.state;
 
         if (transform.length === 0) {
           this.onChange('');
@@ -239,7 +235,7 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
   };
 
   public renderInput = () => {
-    console.log(this.state);
+    // Parsing filters
     const filters = this.props.filters.map((option: FilterOption) => {
       if (typeof option === 'object') {
         return option;
@@ -251,6 +247,7 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
       };
     });
 
+    // Filtering for errors that apply to this row
     const errors = this.props.errors
       ? this.props.errors.filter((err) => {
           try {
@@ -266,23 +263,10 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
         })
       : [];
 
-    const transforms = this.props.transforms;
-    const inputFieldProps = {
-      multiselect: true,
-      allowedTypes: [],
-    };
-
-    const properties: PluginProperties = {};
-    const config: IConfigurationGroupProps = {
-      classes: {},
-      errors: {},
-      values: {},
-      pluginProperties: properties,
-    };
-
+    // Splitting erros between localErrors (errors that apply to the transform, filters or fields)
+    // and nestedErrors (errors that apply to the nested transform properties)
     const localErrors: IErrorObj[] = [];
     const nestedErrors: IErrorObj[] = [];
-    const errorDict = {};
     errors.forEach((err) => {
       try {
         const errorConfig: IErrorConfig = JSON.parse(err.element);
@@ -291,18 +275,37 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
         } else {
           localErrors.push(err);
         }
-        errorDict[errorConfig.transformPropertyId] = true;
-      } catch (error) {}
+      } catch (error) {
+        return;
+      }
     });
+
+    const transforms = this.props.transforms;
+
+    // WidgetProps for inputFieldDropdown
+    const inputFieldProps = {
+      multiselect: true,
+      allowedTypes: [],
+    };
+
+    // WidgetProps for ConfiguartionGroup that will hold transform properties
+    const properties: PluginProperties = {};
+    const config: IConfigurationGroupProps = {
+      classes: {},
+      errors: {},
+      values: {},
+      pluginProperties: properties,
+    };
 
     if (this.state.transform !== '') {
       inputFieldProps.allowedTypes =
-        transforms.filter((transform) => transform.name == this.state.transform)[0]
-          .supportedTypes || [];
+        transforms.filter((trans) => trans.name === this.state.transform)[0].supportedTypes || [];
 
-      const transform: ITransformProp = this.props.transforms.filter(
+      const transform: ITransformProp = transforms.filter(
         (t) => t.name === this.state.transform
       )[0];
+
+      // Populating the pluginProperties for each transform property
       transform.options.forEach((transProp) => {
         const pluginProp: IPluginProperty = {
           name: transProp.name,
@@ -322,6 +325,7 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
       });
 
       config.pluginProperties = properties;
+      // Parsing errors for ConfigurationGroup
       config.errors = {};
       nestedErrors.forEach((err) => {
         try {
@@ -332,9 +336,11 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
           } else {
             config.errors[errorConfig.transformPropertyId] = [errorObj];
           }
-          errorDict[errorConfig.transformPropertyId] = true;
-        } catch (error) {}
+        } catch (error) {
+          return;
+        }
       });
+
       config.widgetJson = {
         'configuration-groups': [
           {
@@ -342,7 +348,7 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
             properties: transform.options,
           },
         ],
-        filters: transform.filters,
+        filters: transform.filters, // Passing ConfigurationGroup filters to allow for dynamic showing/hiding of properties
       };
       config.values = this.state.transformProperties;
       config.classes = this.props.classes;
@@ -394,11 +400,10 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
 
           {localErrors.map((err) => {
             try {
-              const errorConfig: IErrorConfig = JSON.parse(err.element);
-              if (!errorConfig.isNestedError) {
-                return <div className={this.props.classes.errorText}>{err.msg}</div>;
-              }
-            } catch (error) {}
+              return <div className={this.props.classes.errorText}>{err.msg}</div>;
+            } catch (error) {
+              return;
+            }
           })}
           <div className={this.props.classes.transformContainer}>
             <If
@@ -430,7 +435,7 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
             onClick={() => {
               this.handleChange('expanded', !this.state.expanded);
             }}
-            disabled={Object.keys(this.state.transformProperties).length == 0}
+            disabled={Object.keys(this.state.transformProperties).length === 0}
           >
             <ExpandMoreIcon />
           </IconButton>

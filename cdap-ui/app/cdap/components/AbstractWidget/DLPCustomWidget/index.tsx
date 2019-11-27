@@ -82,7 +82,6 @@ class DLPWidgetView extends AbstractMultiRowWidget<IDLPProps> {
 }
 
 export default function DLPWidget(props) {
-  console.log(props);
   return (
     <ThemeWrapper>
       <DLPWidgetView {...props} />
