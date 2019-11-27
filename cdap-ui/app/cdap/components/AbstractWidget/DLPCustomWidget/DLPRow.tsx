@@ -188,12 +188,15 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
   };
 
   private handleChangeSelect = (type: StateKeys, e) => {
-    this.handleChange(type, e.target.value);
+    const value = e.target.value;
+    if (value == this.state.transform) {
+      return;
+    }
+    this.handleChange(type, value);
     if (type === 'transform') {
-      debugger;
       const transformProps = {};
       this.props.transforms
-        .filter((transform) => transform.name === e.target.value)[0]
+        .filter((transform) => transform.name === value)[0]
         .options.forEach((element) => {
           transformProps[element.name] = element['widget-attributes'].default || '';
         });
@@ -208,10 +211,14 @@ class DLPRow extends AbstractRow<IDLPRowProps, IDLPRowState> {
     const oldValuesKeys = Object.keys(this.state.transformProperties);
     const longerKeysList =
       newValuesKeys.length >= oldValuesKeys.length ? newValuesKeys : oldValuesKeys;
+    const longerDict =
+      newValuesKeys.length >= oldValuesKeys.length ? values : this.state.transformProperties;
     const shorterKeysList =
       newValuesKeys.length < oldValuesKeys.length ? newValuesKeys : oldValuesKeys;
     const diffs = longerKeysList.filter(
-      (key) => !shorterKeysList.includes(key) || values[key] !== this.state.transformProperties[key]
+      (key) =>
+        !(shorterKeysList.includes(key) || longerDict[key] === '') ||
+        (values[key] !== undefined && values[key] !== this.state.transformProperties[key])
     );
 
     // Only update if there are differences
