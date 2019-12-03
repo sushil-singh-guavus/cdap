@@ -21,6 +21,7 @@ import Alert from 'components/Alert';
 import { runPipeline } from 'components/PipelineConfigurations/Store/ActionCreator';
 import { setRunError } from 'components/PipelineDetails/store/ActionCreator';
 import PipelineRuntimeArgsDropdownBtn from 'components/PipelineDetails/PipelineRuntimeArgsDropdownBtn';
+import PipelineConfigurationsStore from 'components/PipelineConfigurations/Store';
 import { convertKeyValuePairsToMap } from 'services/helpers';
 import T from 'i18n-react';
 

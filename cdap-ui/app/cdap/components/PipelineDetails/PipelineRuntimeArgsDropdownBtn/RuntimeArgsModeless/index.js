@@ -45,7 +45,7 @@ class RuntimeArgsModeless extends PureComponent {
     error: null,
   };
 
-  componentWillReceiveProps(nextProps) {
+  componentWillReceiveProps() {
     this.setState({
       savedSuccessMessage: null,
     });
