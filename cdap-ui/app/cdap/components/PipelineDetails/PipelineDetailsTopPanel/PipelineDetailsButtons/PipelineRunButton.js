@@ -48,17 +48,22 @@ export default class PipelineRunButton extends Component {
     });
   };
 
-  onRunPipelineClick = () => {
+  runPipelineOrToggleConfig = () => {
     if (this.props.runButtonLoading) {
       return;
     }
 
     if (!this.state.showRunOptions) {
-      let { runtimeArgs } = this.props;
-      // Arguments with empty values are assumed to be provided from the pipeline
-      runtimeArgs.pairs = runtimeArgs.pairs.filter((runtimeArg) => !runtimeArg.value);
-      let runtimeArgsMap = convertKeyValuePairsToMap(runtimeArgs.pairs);
-      runPipeline(runtimeArgsMap);
+      let { isMissingKeyValues } = PipelineConfigurationsStore.getState();
+      if (isMissingKeyValues) {
+        this.toggleRunConfigOption();
+      } else {
+        let { runtimeArgs } = this.props;
+        // Arguments with empty values are assumed to be provided from the pipeline
+        runtimeArgs.pairs = runtimeArgs.pairs.filter((runtimeArg) => !runtimeArg.value);
+        let runtimeArgsMap = convertKeyValuePairsToMap(runtimeArgs.pairs);
+        runPipeline(runtimeArgsMap);
+      }
     }
   };
 
@@ -91,7 +96,7 @@ export default class PipelineRunButton extends Component {
     return (
       <div
         data-cy="pipeline-run-btn"
-        onClick={this.onRunPipelineClick}
+        onClick={this.runPipelineOrToggleConfig}
         className="btn btn-secondary pipeline-action-btn pipeline-run-btn"
         disabled={this.props.runButtonLoading}
       >

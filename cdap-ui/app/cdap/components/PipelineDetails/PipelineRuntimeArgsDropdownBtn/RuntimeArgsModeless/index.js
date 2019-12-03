@@ -27,8 +27,11 @@ import { connect } from 'react-redux';
 import isEmpty from 'lodash/isEmpty';
 import { convertKeyValuePairsToMap } from 'services/helpers';
 import Popover from 'components/Popover';
+import T from 'i18n-react';
 require('./RuntimeArgsModeless.scss');
 
+const I18N_PREFIX =
+  'features.PipelineDetails.PipelineRuntimeArgsDropdownBtn.RuntimeArgsTabContent.RuntimeArgsModeless';
 class RuntimeArgsModeless extends PureComponent {
   static propTypes = {
     runtimeArgs: PropTypes.object,
@@ -113,19 +116,15 @@ class RuntimeArgsModeless extends PureComponent {
     };
     return (
       <div className="runtime-args-modeless">
-        <div className="arguments-label">
-          Specify runtime arguments, empty values need to come from the pipeline.
-        </div>
+        <div className="arguments-label">{T.translate(`${I18N_PREFIX}.specifyArgs`)}</div>
         <RuntimeArgsTabContent />
         <div className="tab-footer">
           <div className="btns-container">
             <Popover target={SaveBtn} placement="left" showOn="Hover">
-              Changes to runtime arguments will be saved for all future runs of the pipeline. This
-              may impact any schedules and triggers configured for this pipeline.
+              {T.translate(`${I18N_PREFIX}.saveBtnPopover`)}
             </Popover>
             <Popover target={RunBtn} showOn="Hover" placement="right">
-              Run the pipeline once with the runtime arguments set above. Any changes made to the
-              runtime arguments will be available only for the next run.
+              {T.translate(`${I18N_PREFIX}.runBtnPopover`)}
             </Popover>
             {!isEmpty(this.state.savedSuccessMessage) ? (
               <span className="text-success">{this.state.savedSuccessMessage}</span>
