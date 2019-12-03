@@ -92,36 +92,6 @@ public class KeycloakBasicAuthenticator extends BasicAuthenticator {
             if (credentials != null)
             {
                 return new UserAuthentication(getAuthMethod(), new DefaultUserIdentity(null,null,null));
-
-
-//                int space=credentials.indexOf(' ');
-//                if (space>0)
-//                {
-//                    String method=credentials.substring(0,space);
-//                    if ("basic".equalsIgnoreCase(method))
-//                    {
-//                        credentials = credentials.substring(space+1);
-//                        credentials = B64Code.decode(credentials,StringUtil.__ISO_8859_1);
-//                        int i = credentials.indexOf(':');
-//                        if (i>0)
-//                        {
-//                            username = credentials.substring(0,i);
-//                            String password = credentials.substring(i+1);
-//
-//                            Log.info("username : " + username);
-//                            Log.info("password : " + password);
-//
-//                            AuthzClient client = AuthzClient.create();
-//                            AccessTokenResponse keycloakResponse = client.obtainAccessToken(username,password);
-//                            if(keycloakResponse.getToken()!=null) {
-//                                UserIdentity user = login(username, null, request);
-//                                if (user != null) {
-//                                    return new UserAuthentication(getAuthMethod(), user);
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
             }
 
             if (DeferredAuthentication.isDeferred(response))

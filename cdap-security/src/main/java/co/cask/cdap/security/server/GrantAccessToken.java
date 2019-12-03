@@ -158,8 +158,8 @@ public class GrantAccessToken {
 
         if (auth != null) {
             try {
-                String client_id = request.getParameter(OAuth2Constants.CLIENT_ID);
-                String client_secret = request.getParameter(OAuth2Constants.CLIENT_SECRET);
+                String client_id = deployment.getResourceName();
+                String client_secret = deployment.getResourceCredentials().get(client_id).toString();
                 String refresh_token = request.getParameter(OAuth2Constants.REFRESH_TOKEN);
                 String refreshUrl = deployment.getTokenUrl();
 
@@ -238,14 +238,17 @@ public class GrantAccessToken {
         /* TO BE DONE */
 
         String username;
-        String refreshTokenString;
         org.keycloak.representations.AccessToken keycloakToken = null;
+        boolean request_from_ui=false;
         List<String> userGroups = Collections.emptyList();
         String authorizationHeader = request.getHeader("keycloakToken");
         String wireToken;
 
-        if(authorizationHeader==null)
+        if(authorizationHeader==null) {
             authorizationHeader = request.getAttribute("keycloakToken").toString();
+            if(authorizationHeader!=null && !authorizationHeader.isEmpty())
+                request_from_ui = true;
+        }
 
         if (authorizationHeader != null && !Strings.isNullOrEmpty(authorizationHeader)) {
             wireToken = authorizationHeader;
@@ -285,7 +288,8 @@ public class GrantAccessToken {
         AccessToken cdapToken = tokenManager.signIdentifier(tokenIdentifier);
         LOG.debug("Issued token for user {}", username);
 
-//        setResponse(request, response, cdapToken, null, (expireTime - issueTime));
+        if(!request_from_ui)
+            setResponse(request, response, cdapToken, null, (expireTime - issueTime));
 
         return cdapToken;
     }
