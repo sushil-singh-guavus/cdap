@@ -35,6 +35,7 @@ public class AccessTokenIdentifier {
     static {
       schemas.put(1, Schema.recordOf("AccessTokenIdentifier",
                                      Schema.Field.of("username", Schema.of(Schema.Type.STRING)),
+				      Schema.Field.of("keycloakToken", Schema.of(Schema.Type.STRING)),
                                      Schema.Field.of("groups", Schema.arrayOf(Schema.of(Schema.Type.STRING))),
                                      Schema.Field.of("issueTimestamp", Schema.of(Schema.Type.LONG)),
                                      Schema.Field.of("expireTimestamp", Schema.of(Schema.Type.LONG))));
@@ -54,16 +55,23 @@ public class AccessTokenIdentifier {
   }
 
   private final String username;
+  private final String keycloakToken;
   private final List<String> groups;
   private final long issueTimestamp;
   private final long expireTimestamp;
 
-  public AccessTokenIdentifier(String username, Collection<String> groups, long issueTimestamp,
-                               long expireTimestamp) {
+
+   public AccessTokenIdentifier(String username, Collection<String> groups, long issueTimestamp, long expireTimestamp) {
+   this(username,groups,issueTimestamp,expireTimestamp,new String());
+   }
+
+
+  public AccessTokenIdentifier(String username, Collection<String> groups, long issueTimestamp, long expireTimestamp, String keycloakToken) {
     this.username = username;
     this.groups = ImmutableList.copyOf(groups);
     this.issueTimestamp = issueTimestamp;
     this.expireTimestamp = expireTimestamp;
+    this.keycloakToken = keycloakToken;
   }
 
   /**
@@ -79,6 +87,11 @@ public class AccessTokenIdentifier {
   public List<String> getGroups() {
     return groups;
   }
+
+  public String getKeycloakToken() {
+     return keycloakToken;
+  }
+
 
   /**
    * Returns the timestamp, in milliseconds, when this token was issued.
@@ -120,6 +133,7 @@ public class AccessTokenIdentifier {
     return Objects.toStringHelper(this)
       .add("username", username)
       .add("groups", groups)
+      .add("keycloakToken",keycloakToken)
       .add("issueTimestamp", issueTimestamp)
       .add("expireTimestamp", expireTimestamp)
       .toString();
