@@ -29,9 +29,16 @@ import com.google.gson.JsonObject;
 import com.google.inject.Inject;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.message.BasicNameValuePair;
 import org.eclipse.jetty.http.HttpHeaders;
 import org.eclipse.jetty.util.B64Code;
 import org.eclipse.jetty.util.StringUtil;
+import org.json.JSONObject;
+import org.json.XML;
 import org.keycloak.OAuth2Constants;
 import org.keycloak.adapters.KeycloakDeployment;
 import org.keycloak.adapters.KeycloakDeploymentBuilder;
@@ -44,9 +51,11 @@ import org.keycloak.representations.AccessTokenResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
+import java.io.*;
+import java.net.URL;
 import java.util.Collections;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import javax.servlet.ServletException;
@@ -82,8 +91,8 @@ public class GrantAccessToken {
     this.tokenCodec = tokenCodec;
     this.tokenExpiration = cConf.getLong(Constants.Security.TOKEN_EXPIRATION);
     this.extendedTokenExpiration = cConf.getLong(Constants.Security.EXTENDED_TOKEN_EXPIRATION);
-    this.deployment = KeycloakDeploymentBuilder.build(Thread.currentThread().getContextClassLoader().getResourceAsStream("keycloak.json"));
-
+//    this.deployment = KeycloakDeploymentBuilder.build(Thread.currentThread().getContextClassLoader().getResourceAsStream("keycloak.json"));
+      this.deployment = createKeycloakDeployment(cConf.getResource("cdap-site.xml").getPath());
   }
 
   /**
@@ -197,6 +206,57 @@ public class GrantAccessToken {
         }
         return Response.status(401).build();
     }
+
+    @Path(Paths.LOGOUT_END_POINT)
+    @POST
+    @Produces("application/json")
+    public Response logout(@Context HttpServletRequest request, @Context HttpServletResponse response)
+            throws IOException, ServletException, VerificationException {
+        try {
+            String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+            String auth=null;
+
+            if (authorizationHeader!=null && !Strings.isNullOrEmpty(authorizationHeader) && (authorizationHeader.trim().toLowerCase().startsWith("bearer "))) {
+                auth = authorizationHeader.substring(7);
+            }
+            if (auth != null) {
+                byte[] decodedToken = Base64.decodeBase64(auth);
+                AccessToken accessToken = tokenCodec.decode(decodedToken);
+
+                if (accessToken.getIdentifier().getExpireTimestamp() < System.currentTimeMillis()) {
+                    return Response.status(HttpServletResponse.SC_UNAUTHORIZED).build();
+                }
+
+                String client_id = deployment.getResourceName();
+                String client_secret = deployment.getResourceCredentials().get(client_id).toString();
+                String refresh_token = request.getParameter(OAuth2Constants.REFRESH_TOKEN);
+//                String logoutUrl = "http://192.168.154.194:8180/auth/realms/dev/protocol/openid-connect/logout";
+                String logoutUrl = "http://"+deployment.getAuthUrl().getHost()+":"+deployment.getAuthUrl().getPort()+deployment.getLogoutUrl().getPath();
+
+                HttpPost post = new HttpPost(logoutUrl);
+                List<NameValuePair> parameters = new LinkedList<>();
+                parameters.add(new BasicNameValuePair(OAuth2Constants.CLIENT_ID, client_id));
+                parameters.add(new BasicNameValuePair(OAuth2Constants.CLIENT_SECRET, client_secret));
+                parameters.add(new BasicNameValuePair(OAuth2Constants.REFRESH_TOKEN, refresh_token));
+
+                UrlEncodedFormEntity formEntity = new UrlEncodedFormEntity(parameters, Charsets.UTF_8);
+                post.setEntity(formEntity);
+                org.apache.http.HttpResponse httpResponse = HttpClientBuilder.create().build().execute(post);
+
+                if (httpResponse.getStatusLine().getStatusCode() == 204) {
+                    return Response.status(200).build();
+                } else {
+                    return Response.status(httpResponse.getStatusLine().getStatusCode()).build();
+                }
+            }
+        } catch (HttpResponseException ex) {
+            return Response.status(ex.getStatusCode()).build();
+        } catch (Exception ex) {
+            return Response.status(HttpServletResponse.SC_UNAUTHORIZED).build();
+        }
+        return Response.status(HttpServletResponse.SC_UNAUTHORIZED).build();
+    }
+
 
    private void setResponse(HttpServletRequest request, HttpServletResponse response, AccessToken token, String refreshToken,
                              long tokenValidity) throws IOException, ServletException {
@@ -380,4 +440,50 @@ public class GrantAccessToken {
     response.getOutputStream().print(json.toString());
     response.setStatus(HttpServletResponse.SC_OK);
   }
+
+
+    public static KeycloakDeployment createKeycloakDeployment(String Configfile){
+
+        try {
+            File xmlFile = new File(Configfile);
+            Reader fileReader = new FileReader(xmlFile);
+            BufferedReader bufReader = new BufferedReader(fileReader);
+            boolean flag = false;
+            StringBuilder sb = new StringBuilder();
+            String line = bufReader.readLine().trim();
+            while (line != null) {
+                if (line.endsWith("</keycloakConfiguration>")) {
+                    flag = false;
+                    break;
+                }
+                if (line.endsWith("<keycloakConfiguration>") || flag == true) {
+                    if(flag)
+                        sb.append(line).append("\n");
+                    flag=true;
+                }
+                line = bufReader.readLine().trim();
+            }
+
+            if(sb.length()!=0) {
+                String xml2String = sb.toString();
+
+                JSONObject obj = XML.toJSONObject(xml2String);
+                String str = obj.toString();
+                InputStream is = new ByteArrayInputStream(str.getBytes());
+
+                KeycloakDeployment deployment = KeycloakDeploymentBuilder.build(is);
+                System.out.println(deployment.getRealm());
+                return deployment;
+            }
+            else{
+                throw new RuntimeException("Keycloak configuration is not defined");
+            }
+
+        }
+        catch(Exception ex){
+            throw new RuntimeException(ex.getMessage());
+        }
+
+    }
+
 }
