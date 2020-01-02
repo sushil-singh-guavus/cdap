@@ -40,9 +40,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.Enumeration;
 import java.util.Map;
 import java.util.Properties;
 import java.util.jar.Attributes;
+import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.zip.ZipException;
@@ -145,6 +149,10 @@ public class AuthorizerInstantiator implements Closeable, Supplier<Authorizer> {
     return authorizer;
   }
 
+  public AuthorizerClassLoader getAuthorizerClassLoader (){
+    return this.authorizerClassLoader;
+  }
+
   /**
    * Creates a new instance of the configured {@link Authorizer} extension, based on the provided extension jar
    * file.
@@ -162,6 +170,7 @@ public class AuthorizerInstantiator implements Closeable, Supplier<Authorizer> {
       Authorizer authorizer;
       try {
         authorizer = instantiatorFactory.get(TypeToken.of(authorizerClass)).create();
+        System.out.println("ok");
       } catch (Exception e) {
         throw new InvalidAuthorizerException(
           String.format("Error while instantiating for authorizer extension %s. Please make sure that the extension " +
@@ -175,7 +184,11 @@ public class AuthorizerInstantiator implements Closeable, Supplier<Authorizer> {
           String.format("Error while initializing authorizer extension %s.", authorizerClass.getName()), e);
       }
       return authorizer;
-    } finally {
+    }
+    catch(Exception ex){
+      throw new RuntimeException("jsvjssgvjsv");
+    }
+    finally {
       // After the process of creation of a new instance has completed (success or failure), reset the context
       // classloader back to the original class loader.
       ClassLoaders.setContextClassLoader(oldClassLoader);
@@ -205,11 +218,11 @@ public class AuthorizerInstantiator implements Closeable, Supplier<Authorizer> {
       return new AuthorizerClassLoader(tmpDir, authorizerExtraClasspath);
     } catch (ZipException e) {
       throw new InvalidAuthorizerException(
-        String.format("Authorization extension jar %s specified as %s must be a jar file.", authorizerExtensionJar,
+              String.format("Authorization extension jar %s specified as %s must be a jar file.", authorizerExtensionJar,
                       Constants.Security.Authorization.EXTENSION_JAR_PATH), e
       );
     }
-  }
+    }
 
   @SuppressWarnings("unchecked")
   private Class<? extends Authorizer> loadAuthorizerClass(File authorizerExtensionJar)
