@@ -59,7 +59,7 @@ public class AuthenticationContextModules {
         bind(AuthenticationContext.class)
           .toInstance(new ProgramContainerAuthenticationContext(new Principal(username,
                                                                               Principal.PrincipalType.USER,
-                                                                              principal)));
+                                                                              principal,SecurityRequestContext.getAccessToken())));
       }
     };
   }
@@ -75,7 +75,7 @@ public class AuthenticationContextModules {
         String username = getUsername();
         bind(AuthenticationContext.class)
           .toInstance(new ProgramContainerAuthenticationContext(new Principal(username,
-                                                                              Principal.PrincipalType.USER)));
+                                                                              Principal.PrincipalType.USER,null,SecurityRequestContext.getAccessToken())));
       }
     };
   }

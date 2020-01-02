@@ -38,6 +38,7 @@ public class AuthenticationChannelHandler extends ChannelInboundHandlerAdapter {
 
   private String currentUserId;
   private String currentUserIP;
+  private String accessToken;
 
   /**
    * Decode the AccessTokenIdentifier passed as a header and set it in a ThreadLocal.
@@ -46,15 +47,21 @@ public class AuthenticationChannelHandler extends ChannelInboundHandlerAdapter {
   @Override
   public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
     if (msg instanceof HttpRequest) {
+
       // TODO: authenticate the user using user id - CDAP-688
       HttpRequest request = (HttpRequest) msg;
       currentUserId = request.headers().get(Constants.Security.Headers.USER_ID);
       currentUserIP = request.headers().get(Constants.Security.Headers.USER_IP);
+      accessToken = request.headers().get("authorization");
       SecurityRequestContext.setUserId(currentUserId);
       SecurityRequestContext.setUserIP(currentUserIP);
+      if(accessToken!=null)
+        SecurityRequestContext.setAccessToken(accessToken.substring(14));
     } else if (msg instanceof HttpContent) {
       SecurityRequestContext.setUserId(currentUserId);
       SecurityRequestContext.setUserIP(currentUserIP);
+//      if(accessToken!=null)
+//        SecurityRequestContext.setAccessToken(accessToken.substring(14));
     }
 
     ctx.fireChannelRead(msg);

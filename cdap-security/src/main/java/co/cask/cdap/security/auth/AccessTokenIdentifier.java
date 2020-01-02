@@ -68,10 +68,10 @@ public class AccessTokenIdentifier {
 
   public AccessTokenIdentifier(String username, Collection<String> groups, long issueTimestamp, long expireTimestamp, String keycloakToken) {
     this.username = username;
+    this.keycloakToken = keycloakToken;
     this.groups = ImmutableList.copyOf(groups);
     this.issueTimestamp = issueTimestamp;
     this.expireTimestamp = expireTimestamp;
-    this.keycloakToken = keycloakToken;
   }
 
   /**
@@ -123,6 +123,7 @@ public class AccessTokenIdentifier {
   @Override
   public int hashCode() {
     return Objects.hashCode(getUsername(),
+                            getKeycloakToken(),
                             getGroups(),
                             getIssueTimestamp(),
                             getExpireTimestamp());
@@ -132,8 +133,8 @@ public class AccessTokenIdentifier {
   public String toString() {
     return Objects.toStringHelper(this)
       .add("username", username)
-      .add("groups", groups)
       .add("keycloakToken",keycloakToken)
+      .add("groups", groups)
       .add("issueTimestamp", issueTimestamp)
       .add("expireTimestamp", expireTimestamp)
       .toString();

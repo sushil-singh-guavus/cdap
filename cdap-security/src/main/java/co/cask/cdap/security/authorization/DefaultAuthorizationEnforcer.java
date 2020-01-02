@@ -18,6 +18,7 @@ package co.cask.cdap.security.authorization;
 
 import co.cask.cdap.common.conf.CConfiguration;
 import co.cask.cdap.common.conf.Constants;
+import co.cask.cdap.common.lang.ClassLoaders;
 import co.cask.cdap.proto.element.EntityType;
 import co.cask.cdap.proto.id.EntityId;
 import co.cask.cdap.proto.id.NamespaceId;
@@ -117,8 +118,12 @@ public class DefaultAuthorizationEnforcer extends AbstractAuthorizationEnforcer 
     StopWatch watch = new StopWatch();
     watch.start();
     try {
+      AuthorizerClassLoader authorizerClassLoader = authorizerInstantiator.getAuthorizerClassLoader();
+      ClassLoaders.setContextClassLoader(authorizerClassLoader);
+
       authorizerInstantiator.get().enforce(entity, principal, actions);
-    } finally {
+    }
+    finally {
       watch.stop();
       long timeTaken = watch.getTime();
       String logLine = "Enforced actions {} on {} for principal {}. Time spent in enforcement was {} ms.";

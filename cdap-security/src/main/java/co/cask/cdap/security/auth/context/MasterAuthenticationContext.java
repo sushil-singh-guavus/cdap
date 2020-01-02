@@ -16,13 +16,22 @@
 
 package co.cask.cdap.security.auth.context;
 
+import co.cask.cdap.common.io.Codec;
 import co.cask.cdap.proto.security.Principal;
+import co.cask.cdap.security.auth.AccessTokenCodec;
+import co.cask.cdap.security.auth.AccessTokenIdentifier;
+import co.cask.cdap.security.auth.KeyIdentifier;
+import co.cask.cdap.security.guice.SecurityModule;
+import co.cask.cdap.security.guice.SecurityModules;
 import co.cask.cdap.security.spi.authentication.AuthenticationContext;
 import co.cask.cdap.security.spi.authentication.SecurityRequestContext;
 import com.google.common.base.Throwables;
+import com.google.inject.Guice;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * An {@link AuthenticationContext} for HTTP requests in the Master. The authentication details in this context are
@@ -32,8 +41,8 @@ import java.io.IOException;
  *   <li>{@link UserGroupInformation}, when the master itself is asynchronously updating privileges in the
  *   authorization policy cache.</li>
  * </ol>
- *
- * @see SecurityRequestContext
+ *SecurityRequestContext
+ * @see
  * @see UserGroupInformation
  */
 public class MasterAuthenticationContext implements AuthenticationContext {
@@ -51,6 +60,18 @@ public class MasterAuthenticationContext implements AuthenticationContext {
         userId = UserGroupInformation.getCurrentUser().getShortUserName();
       } catch (IOException e) {
         throw Throwables.propagate(e);
+      }
+    }
+    if(SecurityRequestContext.getAccessToken()!=null) {
+
+      try {
+//        String accessToken =  (Guice.createInjector(new SecurityModules().getDistributedModules()).getInstance(AccessTokenCodec.class).decode(Base64.decodeBase64(SecurityRequestContext.getAccessToken()))).toString();
+      String accessToken = new String(Base64.decodeBase64(SecurityRequestContext.getAccessToken().trim()));
+        String [] keycloakToken1 = accessToken.substring(userId.length() + 2).split("\\�");
+        String keycloakToken = (keycloakToken1[1].trim()).replaceAll("[^\\p{ASCII}]", "");
+        return new Principal(userId, Principal.PrincipalType.USER, null, keycloakToken);
+      }catch (Exception ex){
+        System.out.println(ex.getMessage());
       }
     }
     return new Principal(userId, Principal.PrincipalType.USER);

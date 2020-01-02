@@ -39,24 +39,30 @@ import org.eclipse.jetty.util.B64Code;
 import org.eclipse.jetty.util.StringUtil;
 import org.json.JSONObject;
 import org.json.XML;
+import org.keycloak.KeycloakSecurityContext;
 import org.keycloak.OAuth2Constants;
 import org.keycloak.adapters.KeycloakDeployment;
 import org.keycloak.adapters.KeycloakDeploymentBuilder;
+import org.keycloak.adapters.OIDCHttpFacade;
 import org.keycloak.adapters.rotation.AdapterTokenVerifier;
+import org.keycloak.authorization.client.AuthorizationDeniedException;
 import org.keycloak.authorization.client.AuthzClient;
+import org.keycloak.authorization.client.resource.ProtectedResource;
 import org.keycloak.authorization.client.util.Http;
 import org.keycloak.authorization.client.util.HttpResponseException;
 import org.keycloak.common.VerificationException;
 import org.keycloak.representations.AccessTokenResponse;
+import org.keycloak.representations.adapters.config.PolicyEnforcerConfig;
+import org.keycloak.representations.idm.authorization.AuthorizationRequest;
+import org.keycloak.representations.idm.authorization.AuthorizationResponse;
+import org.keycloak.representations.idm.authorization.ResourceRepresentation;
+import org.keycloak.util.JsonSerialization;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.URL;
-import java.util.Collections;
-import java.util.Date;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -79,6 +85,7 @@ public class GrantAccessToken {
   private final long tokenExpiration;
   private final long extendedTokenExpiration;
   private static KeycloakDeployment deployment;
+//  private static InputStream keycloakConfigStream;
 
   /**
    * Create a new GrantAccessToken object to generate tokens for authorized users.
@@ -93,6 +100,8 @@ public class GrantAccessToken {
     this.extendedTokenExpiration = cConf.getLong(Constants.Security.EXTENDED_TOKEN_EXPIRATION);
 //    this.deployment = KeycloakDeploymentBuilder.build(Thread.currentThread().getContextClassLoader().getResourceAsStream("keycloak.json"));
       this.deployment = createKeycloakDeployment(cConf.getResource("cdap-site.xml").getPath());
+//      this.deployment = KeycloakDeploymentBuilder.build(keycloakConfigStream);
+//      this.deployment = KeycloakConfDeployment.createKeycloakDeployment();
   }
 
   /**
@@ -118,6 +127,7 @@ public class GrantAccessToken {
     public static final String GET_REFRESH_TOKEN = "refreshToken";
     public static final String GET_EXTENDED_TOKEN = "extendedtoken";
     public static final String LOGOUT_END_POINT = "logout";
+    public static final String GET_RPT = "rptToken";
   }
 
   /**
@@ -130,6 +140,46 @@ public class GrantAccessToken {
       throws IOException, ServletException {
     grantToken(request, response, tokenExpiration);
     return Response.status(200).build();
+  }
+
+
+  @Path(Paths.GET_RPT)
+  @GET
+  @Produces("application/json")
+  public Response rptTokenFromKeycloak(@Context HttpServletRequest request, @Context HttpServletResponse response){
+
+      String authorizationHeader = request.getHeader("keycloakToken");
+//      String keycloakToken = authorizationHeader;
+      String accessToken = new String(Base64.decodeBase64(authorizationHeader));
+      String [] keycloakToken1 = accessToken.split("\\�");
+      String keycloakToken = (keycloakToken1[1].trim()).replaceAll("[^\\p{ASCII}]", "");
+
+
+
+
+
+
+      try{
+//      byte[] decodedToken = Base64.decodeBase64(authorizationHeader);
+//      AccessToken cdapToken = tokenCodec.decode(decodedToken);
+//      String actualKeycloakToken = cdapToken.getIdentifier().getKeycloakToken();
+
+          org.keycloak.representations.AccessToken rptToken =  requestAuthorizationToken("Dataset2","READ",keycloakToken);
+
+
+
+      JsonObject json = new JsonObject();
+      json.addProperty("customdecodedtoken",keycloakToken);
+//      json.addProperty("actualKeycloakToken",actualKeycloakToken);
+//      json.addProperty("rptToken",rptToken.);
+      response.getOutputStream().print(json.toString());
+      } catch (IOException e) {
+          e.printStackTrace();
+          return Response.status(500).build();
+      }
+      response.setStatus(HttpServletResponse.SC_OK);
+      return Response.status(200).build();
+
   }
 
   @Path(Paths.GET_TOKEN_FROM_KEYCLOAK)
@@ -271,9 +321,9 @@ public class GrantAccessToken {
         json.addProperty(ExternalAuthenticationServer.ResponseFields.EXPIRES_IN,
                 TimeUnit.SECONDS.convert(tokenValidity, TimeUnit.MILLISECONDS));
 
-        if (refreshToken != null && !refreshToken.isEmpty()) {
-            json.addProperty(OAuth2Constants.REFRESH_TOKEN, refreshToken);
-        }
+//        if (refreshToken != null && !refreshToken.isEmpty()) {
+//            json.addProperty(OAuth2Constants.REFRESH_TOKEN, refreshToken);
+//        }
 
         response.getOutputStream().print(json.toString());
         response.setStatus(HttpServletResponse.SC_OK);
@@ -292,10 +342,11 @@ public class GrantAccessToken {
     return Response.status(200).build();
   }
 
+
   private AccessToken getTokenUsingKeycloak(HttpServletRequest request, HttpServletResponse response)
             throws IOException, ServletException, UnauthorizedException {
 
-        /* TO BE DONE */
+
 
         String username;
         org.keycloak.representations.AccessToken keycloakToken = null;
@@ -355,6 +406,7 @@ public class GrantAccessToken {
     }
 
 
+
   private static String getJWTTokenFromCookie(HttpServletRequest request) {
         String rawCookie = request.getHeader("cookie");
         if (rawCookie == null) {
@@ -379,10 +431,10 @@ public class GrantAccessToken {
   private void grantToken(HttpServletRequest request, HttpServletResponse response, long tokenValidity)
     throws IOException, ServletException {
 
-            String username = null;
-        String password = null;
+      String username = null;
+      String password = null;
 
-        String credentials = request.getHeader(HttpHeaders.AUTHORIZATION);
+      String credentials = request.getHeader(HttpHeaders.AUTHORIZATION);
 
         if (credentials != null) {
             int space = credentials.indexOf(' ');
@@ -412,7 +464,8 @@ public class GrantAccessToken {
         }
 
 
-    //String username = request.getUserPrincipal().getName();
+//    String username = request.getUserPrincipal().getName();
+//      String username="guavus";
     List<String> userGroups = Collections.emptyList();
 
     long issueTime = System.currentTimeMillis();
@@ -485,5 +538,36 @@ public class GrantAccessToken {
         }
 
     }
+
+
+
+    public static org.keycloak.representations.AccessToken requestAuthorizationToken(String resource , String scope, String keycloakToken) {
+
+        try {
+            AuthzClient authzClient = AuthzClient.create();
+            AuthorizationRequest authzRequest = new AuthorizationRequest();
+
+            AuthorizationResponse authzResponse;
+
+            ProtectedResource resourceClient = authzClient.protection().resource();
+            ResourceRepresentation existingResource = resourceClient.findByName(resource);
+            authzRequest.addPermission(existingResource.getId(),scope);
+
+//            authzRequest.setSubjectToken(keycloakToken);
+//            authzResponse = authzClient.authorization().authorize(authzRequest);
+            authzResponse = authzClient.authorization(keycloakToken).authorize(authzRequest);
+//
+            if (authzResponse != null) {
+                return AdapterTokenVerifier.verifyToken(authzResponse.getToken(), deployment);
+            }
+        } catch (AuthorizationDeniedException ignore) {
+//            LOGGER.debug("Authorization denied", ignore);
+        } catch (Exception e) {
+            throw new RuntimeException("Unexpected error during authorization request.", e);
+        }
+        return null;
+    }
+
+
 
 }

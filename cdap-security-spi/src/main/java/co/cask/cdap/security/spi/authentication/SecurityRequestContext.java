@@ -25,6 +25,7 @@ import javax.annotation.Nullable;
 public final class SecurityRequestContext {
   private static final ThreadLocal<String> userId = new InheritableThreadLocal<>();
   private static final ThreadLocal<String> userIP = new InheritableThreadLocal<>();
+  private static final ThreadLocal<String> accessToken = new InheritableThreadLocal<>();
 
   private SecurityRequestContext() {
   }
@@ -67,6 +68,15 @@ public final class SecurityRequestContext {
    * Returns a {@link Principal} for the user set on the current thread
    */
   public static Principal toPrincipal() {
-    return new Principal(userId.get(), Principal.PrincipalType.USER);
+    return new Principal(userId.get(), Principal.PrincipalType.USER, null, accessToken.get());
   }
+
+  public static void setAccessToken(String Token){
+    accessToken.set(Token);
+  }
+
+  public static String getAccessToken(){
+    return accessToken.get();
+  }
+
 }
